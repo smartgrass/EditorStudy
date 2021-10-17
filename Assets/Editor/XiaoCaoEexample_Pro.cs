@@ -6,7 +6,7 @@ using UnityEngine.Events;
 using XiaoCao;
 
 
-public class XiaoCaoEexample : XiaoCaoWindow
+public class XiaoCaoEexample_Pro : XiaoCaoWindow
 {
     [CustomLabel("名字")]
     public string s = "aaa";
@@ -23,10 +23,10 @@ public class XiaoCaoEexample : XiaoCaoWindow
 
 
 
-    [MenuItem("Tools/XiaoCaoEexample")]
+    [MenuItem("Tools/XiaoCaoEexample_Pro")]
     static void Open()
     {
-        OpenWindow<XiaoCaoEexample>();
+        OpenWindow<XiaoCaoEexample_Pro>();
     }
 
     void OnValueChange()

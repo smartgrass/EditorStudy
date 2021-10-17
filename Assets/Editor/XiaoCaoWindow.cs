@@ -1,5 +1,4 @@
-﻿
-using NaughtyAttributes.Editor;
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -159,12 +158,222 @@ namespace XiaoCao
         }
         public static T GetAttribute<T>(SerializedProperty property) where T : class
         {
-            T[] attributes = GetAttributes<T>(property);
+            T[] attributes = PropertyUtility.GetAttributes<T>(property);
             return (attributes.Length > 0) ? attributes[0] : null;
         }
 
+        void DrawEndBtn()
+        {
+            foreach (var item in noPosMethod)
+            {
+                if (GUILayout.Button(item.name))
+                {
+                    item.method.Invoke(this, null);
+                }
+            }
+        }
 
-        #region tool
+        void DrawButtonPos(int index)
+        {
+            if (methodDic.ContainsKey(index))
+            {
+                EditorGUILayout.Separator();
+                EditorGUILayout.BeginHorizontal();
+                foreach (var att in methodDic[index])
+                {
+                    if(GUILayout.Button(att.name))
+                        att.method.Invoke(this, null);
+                }
+                EditorGUILayout.EndHorizontal();
+                EditorGUILayout.Separator();
+            }
+        }
+
+        private void InvokeWizardUpdate()
+        {
+            if (updateMethod != null)
+                updateMethod.Invoke(this, null);
+        }
+    }
+
+    public class HorLayoutAttribute : Attribute
+    {
+        public bool isHor;
+        /// <summary>
+        /// 使字段在Inspector中显示自定义的名称。
+        /// </summary>
+        /// <param name="name">自定义名称</param>
+        public HorLayoutAttribute(bool isHor = true)
+        {
+            this.isHor = isHor;
+        }
+    }
+    public class ButtonAttribute : Attribute
+    {
+        public string name;
+
+        public int pos;
+
+        //public bool isHor;
+
+        public MethodInfo method;
+        /// <summary>
+        /// 使字段在Inspector中显示自定义的名称。
+        /// </summary>
+        /// <param name="name">自定义名称</param>
+        public ButtonAttribute(string name = "", int pos = -10)
+        {
+            this.name = name;
+            this.pos = pos;
+        }
+    }
+
+    public class CustomLabelAttribute : PropertyAttribute
+    {
+        public string name;
+
+        /// <summary>
+        /// 使字段在Inspector中显示自定义的名称。
+        /// </summary>
+        /// <param name="name">自定义名称</param>
+        public CustomLabelAttribute(string name)
+        {
+            this.name = name;
+        }
+    }
+
+    [CustomPropertyDrawer(typeof(CustomLabelAttribute))]
+    public class CustomLabelDrawer : PropertyDrawer
+    {
+        private GUIContent _label = null;
+        public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
+        {
+            if (_label == null)
+            {
+                string name = (attribute as CustomLabelAttribute).name;
+                _label = new GUIContent(name);
+            }
+
+            EditorGUI.PropertyField(position, property, _label);
+        }
+    }
+
+    public class DrawInfo
+    {
+        public int index = 0;
+        public bool isBeginHor = false;
+    }
+
+
+    public static class ReflectionUtility
+    {
+        public static IEnumerable<FieldInfo> GetAllFields(object target, Func<FieldInfo, bool> predicate)
+        {
+            if (target == null)
+            {
+                Debug.LogError("The target object is null. Check for missing scripts.");
+                yield break;
+            }
+
+            List<Type> types = new List<Type>()
+            {
+                target.GetType()
+            };
+
+            while (types.Last().BaseType != null)
+            {
+                types.Add(types.Last().BaseType);
+            }
+
+            for (int i = types.Count - 1; i >= 0; i--)
+            {
+                IEnumerable<FieldInfo> fieldInfos = types[i]
+                    .GetFields(BindingFlags.Instance | BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.DeclaredOnly)
+                    .Where(predicate);
+
+                foreach (var fieldInfo in fieldInfos)
+                {
+                    yield return fieldInfo;
+                }
+            }
+        }
+
+        public static IEnumerable<PropertyInfo> GetAllProperties(object target, Func<PropertyInfo, bool> predicate)
+        {
+            if (target == null)
+            {
+                Debug.LogError("The target object is null. Check for missing scripts.");
+                yield break;
+            }
+
+            List<Type> types = new List<Type>()
+            {
+                target.GetType()
+            };
+
+            while (types.Last().BaseType != null)
+            {
+                types.Add(types.Last().BaseType);
+            }
+
+            for (int i = types.Count - 1; i >= 0; i--)
+            {
+                IEnumerable<PropertyInfo> propertyInfos = types[i]
+                    .GetProperties(BindingFlags.Instance | BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.DeclaredOnly)
+                    .Where(predicate);
+
+                foreach (var propertyInfo in propertyInfos)
+                {
+                    yield return propertyInfo;
+                }
+            }
+        }
+
+        public static IEnumerable<MethodInfo> GetAllMethods(object target, Func<MethodInfo, bool> predicate)
+        {
+            if (target == null)
+            {
+                Debug.LogError("The target object is null. Check for missing scripts.");
+                return null;
+            }
+
+            IEnumerable<MethodInfo> methodInfos = target.GetType()
+                .GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public)
+                .Where(predicate);
+
+            return methodInfos;
+        }
+
+        public static FieldInfo GetField(object target, string fieldName)
+        {
+            return GetAllFields(target, f => f.Name.Equals(fieldName, StringComparison.InvariantCulture)).FirstOrDefault();
+        }
+
+        public static PropertyInfo GetProperty(object target, string propertyName)
+        {
+            return GetAllProperties(target, p => p.Name.Equals(propertyName, StringComparison.InvariantCulture)).FirstOrDefault();
+        }
+
+        public static MethodInfo GetMethod(object target, string methodName)
+        {
+            return GetAllMethods(target, m => m.Name.Equals(methodName, StringComparison.InvariantCulture)).FirstOrDefault();
+        }
+
+        public static Type GetListElementType(Type listType)
+        {
+            if (listType.IsGenericType)
+            {
+                return listType.GetGenericArguments()[0];
+            }
+            else
+            {
+                return listType.GetElementType();
+            }
+        }
+    }
+
+    public static class PropertyUtility
+    {
         public static T[] GetAttributes<T>(SerializedProperty property) where T : class
         {
             FieldInfo fieldInfo = ReflectionUtility.GetField(GetTargetObjectWithProperty(property), property.name);
@@ -245,113 +454,5 @@ namespace XiaoCao
 
             return null;
         }
-
-        #endregion
-        void DrawEndBtn()
-        {
-            foreach (var item in noPosMethod)
-            {
-                if (GUILayout.Button(item.name))
-                {
-                    item.method.Invoke(this, null);
-                }
-            }
-        }
-
-        void DrawButtonPos(int index)
-        {
-            if (methodDic.ContainsKey(index))
-            {
-                EditorGUILayout.Separator();
-                EditorGUILayout.BeginHorizontal();
-                foreach (var att in methodDic[index])
-                {
-                    if(GUILayout.Button(att.name))
-                        att.method.Invoke(this, null);
-                }
-                EditorGUILayout.EndHorizontal();
-                EditorGUILayout.Separator();
-            }
-        }
-
-        private void InvokeWizardUpdate()
-        {
-            if (updateMethod != null)
-                updateMethod.Invoke(this, null);
-        }
-    }
-
-    public class HorLayoutAttribute : Attribute
-    {
-        public bool isHor;
-        /// <summary>
-        /// 使字段在Inspector中显示自定义的名称。
-        /// </summary>
-        /// <param name="name">自定义名称</param>
-        public HorLayoutAttribute(bool isHor = true)
-        {
-            this.isHor = isHor;
-        }
-    }
-    public class ButtonAttribute : Attribute
-    {
-        public string name;
-
-        public int pos;
-
-        //public bool isHor;
-
-        public MethodInfo method;
-        /// <summary>
-        /// 使字段在Inspector中显示自定义的名称。
-        /// </summary>
-        /// <param name="name">自定义名称</param>
-        public ButtonAttribute(string name = "", int pos = -10)
-        {
-            this.name = name;
-            this.pos = pos;
-        }
-    }
-
-    /// <summary>
-    /// 使字段在Inspector中显示自定义的名称。
-    /// </summary>
-    public class CustomLabelAttribute : PropertyAttribute
-    {
-        public string name;
-
-        /// <summary>
-        /// 使字段在Inspector中显示自定义的名称。
-        /// </summary>
-        /// <param name="name">自定义名称</param>
-        public CustomLabelAttribute(string name)
-        {
-            this.name = name;
-        }
-    }
-
-    /// <summary>
-    /// 定义对带有 `CustomLabelAttribute` 特性的字段的面板内容的绘制行为。
-    /// </summary>
-    [CustomPropertyDrawer(typeof(CustomLabelAttribute))]
-    public class CustomLabelDrawer : PropertyDrawer
-    {
-        private GUIContent _label = null;
-        public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
-        {
-            if (_label == null)
-            {
-                string name = (attribute as CustomLabelAttribute).name;
-                _label = new GUIContent(name);
-            }
-
-            EditorGUI.PropertyField(position, property, _label);
-        }
-    }
-
-    public class DrawInfo
-    {
-        public int index = 0;
-        public bool isBeginHor = false;
     }
 }
