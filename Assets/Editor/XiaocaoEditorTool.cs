@@ -19,6 +19,31 @@ namespace XiaoCao
         public static Object[] ToObjectArray(this IEnumerable<UnityEngine.Object> list)
         {
             return list.ToArray();
-        } 
+        }
+
+
+        public static List<Object> FindAssetListByName(string nameStr, string TypeName, string path = "Assets")
+        {
+            List<Object> objList = new List<Object>();
+            string[] guids = AssetDatabase.FindAssets($"{nameStr} t:{TypeName}", new string[] { path });
+            List<string> paths = new List<string>();
+            new List<string>(guids).ForEach(m => paths.Add(AssetDatabase.GUIDToAssetPath(m)));
+            if (paths.Count > 0)
+            {
+                objList.Add( AssetDatabase.LoadAssetAtPath(paths[0], typeof(Object)));
+            }    
+            return objList;
+        }
+
+        public static Object FindAssetByName(string nameStr,string TypeName,string path = "Assets")
+        {
+            Object obj = null;
+            string[] guids = AssetDatabase.FindAssets($"{nameStr} t:{TypeName}", new string[] { path });
+            List<string> paths = new List<string>();
+            new List<string>(guids).ForEach(m => paths.Add(AssetDatabase.GUIDToAssetPath(m)));
+            if(paths.Count>0)
+                obj = AssetDatabase.LoadAssetAtPath(paths[0], typeof(Object));
+            return obj;
+        }
     }
 }
