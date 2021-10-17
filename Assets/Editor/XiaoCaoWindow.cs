@@ -13,7 +13,7 @@ namespace XiaoCao
 {
 
     /// <summary>
-    /// 小草做的编辑器窗口
+    /// 小草做的编辑器窗口  特性只用于编辑器
     /// </summary>
     public class XiaoCaoWindow : EditorWindow
     {
@@ -29,7 +29,7 @@ namespace XiaoCao
         private DrawInfo drawInfo = new DrawInfo();
 
 
-        public  static T OpenWindow<T>(string title = "title") where T : XiaoCaoWindow
+        public static T OpenWindow<T>(string title = "title") where T : XiaoCaoWindow
         {
             T win = GetWindow<T>(title);
             win.Show();
@@ -50,11 +50,11 @@ namespace XiaoCao
                 att.method = item;
                 if (string.IsNullOrEmpty(att.name))
                     att.name = item.Name;
-                if (att.pos > -10 )
+                if (att.pos > -10)
                 {
                     if (!methodDic.ContainsKey(att.pos))
                     {
-                        methodDic.Add(att.pos,new List<ButtonAttribute>() {att});
+                        methodDic.Add(att.pos, new List<ButtonAttribute>() { att });
                     }
                     else
                     {
@@ -129,7 +129,7 @@ namespace XiaoCao
 
         private void CheckAutoHorEnd()
         {
-            if(drawInfo.isBeginHor)
+            if (drawInfo.isBeginHor)
                 EditorGUILayout.EndHorizontal();
         }
         private void CheckHorEnd(SerializedProperty property)
@@ -181,7 +181,7 @@ namespace XiaoCao
                 EditorGUILayout.BeginHorizontal();
                 foreach (var att in methodDic[index])
                 {
-                    if(GUILayout.Button(att.name))
+                    if (GUILayout.Button(att.name))
                         att.method.Invoke(this, null);
                 }
                 EditorGUILayout.EndHorizontal();
@@ -196,6 +196,8 @@ namespace XiaoCao
         }
     }
 
+
+    #region Attributes
     public class HorLayoutAttribute : Attribute
     {
         public bool isHor;
@@ -258,13 +260,15 @@ namespace XiaoCao
         }
     }
 
+    #endregion
+
     public class DrawInfo
     {
         public int index = 0;
         public bool isBeginHor = false;
     }
 
-
+    #region Utility
     public static class ReflectionUtility
     {
         public static IEnumerable<FieldInfo> GetAllFields(object target, Func<FieldInfo, bool> predicate)
@@ -455,4 +459,6 @@ namespace XiaoCao
             return null;
         }
     }
+
+    #endregion
 }

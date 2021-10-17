@@ -23,8 +23,19 @@ public class EnumLabelAttribute : PropertyAttribute
         this.order = order;
     }
 }
- 
- 
+
+public static class AttributeExtend
+{
+    public static string GetEnumLabel(this Enum enumValue)
+    {
+        FieldInfo fieldInfo = enumValue.GetType().GetField(enumValue.ToString());
+        EnumLabelAttribute[] attrs =
+            fieldInfo.GetCustomAttributes(typeof(EnumLabelAttribute), false) as EnumLabelAttribute[];
+
+        return attrs.Length > 0 ? attrs[0].label : enumValue.ToString();
+    }
+}
+
 #if UNITY_EDITOR
 [CustomPropertyDrawer(typeof(EnumLabelAttribute))]
 public class EnumLabelDrawer : PropertyDrawer
